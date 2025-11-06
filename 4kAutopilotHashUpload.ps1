@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Collects Windows Autopilot hardware hash from WinPE and uploads to Microsoft Intune
 .DESCRIPTION
@@ -22,12 +22,74 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$false)] [String] $GroupTag = "<YOUR-AP-GROUP-TAG>",
-    [Parameter(Mandatory=$false)] [String] $TenantId = "<TENANT-ID>",
-    [Parameter(Mandatory=$false)] [String] $AppId = "<APP/CLIENT-ID>",
-    [Parameter(Mandatory=$false)] [String] $AppSecret = "<APP/CLIENT-SECRET",
+    [Parameter(Mandatory=$false)] [String] $GroupTag = "",
+    [Parameter(Mandatory=$false)] [String] $TenantId = "",
+    [Parameter(Mandatory=$false)] [String] $AppId = "",
+    [Parameter(Mandatory=$false)] [String] $AppSecret = "",
     [Parameter(Mandatory=$false)] [Switch] $UploadToAutopilot = $true
 )
+
+# Define available Group Tag options
+$GroupTagOptions = @(
+    @{Tag = "Option1"; Description = "Option1"},
+    @{Tag = "Option2"; Description = "Option2"},
+    @{Tag = ""; Description = "No Group Tag"}
+)
+
+# Function to display Group Tag selection menu
+function Select-GroupTag {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)] [Array] $Options
+    )
+    
+    Write-Host "`n=== Autopilot Group Tag Selection ===" -ForegroundColor Cyan
+    Write-Host ""
+    
+    # Display menu options
+    for ($i = 0; $i -lt $Options.Count; $i++) {
+        $option = $Options[$i]
+        $menuNumber = $i + 1
+        if ($option.Tag -eq "") {
+            Write-Host "  $menuNumber. $($option.Description)" -ForegroundColor Yellow
+        } else {
+            Write-Host "  $menuNumber. $($option.Description) (Tag: $($option.Tag))" -ForegroundColor White
+        }
+    }
+    
+    Write-Host ""
+    
+    # Prompt for selection
+    $validSelection = $false
+    $selectedTag = ""
+    
+    while (-not $validSelection) {
+        $selection = Read-Host "Please select a Group Tag (1-$($Options.Count))"
+        
+        if ($selection -match '^\d+$') {
+            $selectionNum = [int]$selection
+            if ($selectionNum -ge 1 -and $selectionNum -le $Options.Count) {
+                $selectedTag = $Options[$selectionNum - 1].Tag
+                $validSelection = $true
+                Write-Host "Selected: $($Options[$selectionNum - 1].Description)" -ForegroundColor Green
+                if ($selectedTag -ne "") {
+                    Write-Host "Group Tag: $selectedTag" -ForegroundColor Green
+                }
+            } else {
+                Write-Host "Invalid selection. Please enter a number between 1 and $($Options.Count)." -ForegroundColor Red
+            }
+        } else {
+            Write-Host "Invalid input. Please enter a number between 1 and $($Options.Count)." -ForegroundColor Red
+        }
+    }
+    
+    return $selectedTag
+}
+
+# Prompt for Group Tag selection if not provided as parameter
+if ([string]::IsNullOrEmpty($GroupTag)) {
+    $GroupTag = Select-GroupTag -Options $GroupTagOptions
+}
 
 # Functions for Autopilot API operations
 function Get-AuthToken {
